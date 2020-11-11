@@ -1,0 +1,7 @@
+.game {
+  height: 750px;
+  width: 750px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}

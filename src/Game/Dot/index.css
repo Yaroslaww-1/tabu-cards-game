@@ -1,0 +1,30 @@
+.dotWrapper {
+  height: 30px;
+  width: 30px;
+  padding: 10px;
+}
+
+.dot {
+  height: 20px;
+  width: 20px;
+}
+
+.available {
+  background-color: rgba(128, 128, 128, 0.5);
+}
+
+.user {
+  background-color: red;
+}
+
+.user-win {
+  background-color: rgba(255, 0, 0, 0.5);
+}
+
+.computer {
+  background-color: blue;
+}
+
+.computer-win {
+  background-color: rgba(0, 0, 255, 0.5);
+}
