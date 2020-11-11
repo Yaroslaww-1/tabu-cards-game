@@ -9,7 +9,7 @@
   width: 20px;
 }
 
-.available {
+.empty {
   background-color: rgba(128, 128, 128, 0.5);
 }
 
@@ -17,7 +17,7 @@
   background-color: red;
 }
 
-.user-win {
+.captured-by-user {
   background-color: rgba(255, 0, 0, 0.5);
 }
 
@@ -25,6 +25,6 @@
   background-color: blue;
 }
 
-.computer-win {
+.captured-by-computer {
   background-color: rgba(0, 0, 255, 0.5);
 }

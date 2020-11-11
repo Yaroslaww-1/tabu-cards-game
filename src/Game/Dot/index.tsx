@@ -4,7 +4,7 @@ import { IDot } from '../index';
 
 interface IProps {
   dot: IDot;
-  style: 'available' | 'user' | 'user-win' | 'computer' | 'computer-win';
+  style: 'empty' | 'user' | 'captured-by-user' | 'computer' | 'captured-by-computer';
   onSelect: () => void;
 }
 
