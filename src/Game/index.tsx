@@ -21,7 +21,7 @@ export enum DotType {
 }
 
 function Game() {
-  const FIELD_SIZE = 10;
+  const FIELD_SIZE = 8;
   const [field, setField] = React.useState<DotType[][]>(Array.from(Array(FIELD_SIZE), () => Array(FIELD_SIZE).fill(DotType.empty)))
 
   const getDotStyle = ({ x, y }: IDot) => {
@@ -32,17 +32,7 @@ function Game() {
     return 'captured-by-computer';
   }
 
-  const copyArray = <T extends any>(array: T[][]): T[][] => {
-    // const newArray = [];
-    // for (let i = 0; i < array.length; i++) {
-    //   newArray.push(array[i].slice());
-    // }
-    return JSON.parse(JSON.stringify(array));
-  }
-
-  // React.useEffect(() => {
-  //   console.log('field changing', field);
-  // }, [field]);
+  const copyArray = <T extends any>(array: T[][]): T[][] => JSON.parse(JSON.stringify(array));
 
   const onDotSelect = (dot: IDot) => {
     if (field[dot.x][dot.y] === DotType.empty) {
@@ -62,7 +52,7 @@ function Game() {
       const states: [number, number][] = [];
       let actions: { x: number, y: number }[] = [];
       const getValues = (state: DotType[][], depth: number, player: DotType) => {
-        if (depth === 1) {
+        if (depth === 3) {
           return;
         }
         for (let x = 0; x < FIELD_SIZE; x++) {
@@ -83,32 +73,22 @@ function Game() {
         }
       }
       getValues(copyArray(newField), 0, DotType.computer);
-            // console.log('actions.length', actions.length);
-      const [_, index] = alphaBetaAlgorithm({ 
-        depth: 0, nodeIndex: 0, values: states, maximizingPlayer: true, alpha: MIN, beta: MAX
-      });
-            // while (true) {
-            //   console.log(FIELD_SIZE);
-            //   const ranX = getRandomInt(FIELD_SIZE);
-            //   const ranY = getRandomInt(FIELD_SIZE);
-            //   if (field[ranX][ranY] === DotType.empty) {
-            //     ac = { x: ranX, y: ranY };
-            //     break;
-            //   }
-            // }
-      const { x, y } = actions[index];
-            // if (_newField[2][3] === DotType.computer) return; 
-      newField[x][y] = DotType.computer;
-      setField(newField);
-      newField = recalculateCapturedFields(
-        { x, y, id: x + y * 1000 },
-        DotType.computer,
-        DotType.capturedByComputer,
-        DotType.user,
-        copyArray(newField),
-      );
-
-      setField(newField);
+      try {
+        const [_, index] = alphaBetaAlgorithm({ 
+          depth: 0, nodeIndex: 0, values: states, maximizingPlayer: true, alpha: MIN, beta: MAX
+        });
+        const { x, y } = actions[index];
+        newField[x][y] = DotType.computer;
+        setField(newField);
+        newField = recalculateCapturedFields(
+          { x, y, id: x + y * 1000 },
+          DotType.computer,
+          DotType.capturedByComputer,
+          DotType.user,
+          copyArray(newField),
+        );
+        setField(newField);
+      } catch(e) {}
     }
   }
 
@@ -129,10 +109,8 @@ function Game() {
 
     const dfs = (x: number, y: number) => {
       visited.push({ x, y });
-      console.log(x, y);
       if (x === 0 || x === FIELD_SIZE - 1 || y === 0 || y === FIELD_SIZE - 1 || !isClosed) {
         isClosed = false;
-        console.log('return');
         return;
       }
       if (x < FIELD_SIZE - 1 && isEmpty(x + 1, y) && !isVisitedContains(x + 1, y)) {
@@ -199,7 +177,7 @@ function Game() {
       beta: number
     }
   ): [number, number] => {
-    if (depth === 1) {
+    if (depth === 3) {
       return values[nodeIndex];
     }
 
