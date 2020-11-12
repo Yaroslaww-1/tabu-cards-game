@@ -2,10 +2,6 @@ import React from 'react';
 import Dot from './Dot';
 import './index.css';
 
-function getRandomInt(max: number) {
-  return Math.floor(Math.random() * Math.floor(max));
-}
-
 export interface IDot {
   id: number;
   x: number;
@@ -63,7 +59,11 @@ function Game() {
               const heuristicValue = getHeuristicValue(
                 newState,
                 player === DotType.user ? DotType.capturedByUser : DotType.capturedByComputer,
-                player === DotType.user ? DotType.capturedByComputer : DotType.capturedByUser
+                player === DotType.user ? DotType.capturedByComputer : DotType.capturedByUser,
+                player,
+                player === DotType.user ? DotType.computer : DotType.user,
+                x,
+                y
               );
               states.push([heuristicValue, states.length]);
               actions.push({ x, y });
@@ -77,6 +77,7 @@ function Game() {
         const [_, index] = alphaBetaAlgorithm({ 
           depth: 0, nodeIndex: 0, values: states, maximizingPlayer: true, alpha: MIN, beta: MAX
         });
+        console.log(getHeuristicForDot(newField, 1, 3, DotType.computer, DotType.user));
         const { x, y } = actions[index];
         newField[x][y] = DotType.computer;
         setField(newField);
@@ -185,7 +186,7 @@ function Game() {
       let best = MIN;
       let bestIndex = 0;
 
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < FIELD_SIZE * FIELD_SIZE; i++) {
         const [val, index] = alphaBetaAlgorithm({ depth: depth + 1, nodeIndex: nodeIndex * 2 + i, maximizingPlayer: false, values, alpha, beta });
         if (val > best) {
           best = val;
@@ -202,7 +203,7 @@ function Game() {
       let best = MAX;
       let bestIndex = 0;
 
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < FIELD_SIZE * FIELD_SIZE; i++) {
         const [val, index] = alphaBetaAlgorithm({ depth: depth + 1, nodeIndex: nodeIndex * 2 + i, maximizingPlayer: true, values, alpha, beta });
         if (val < best) {
           best = val;
@@ -218,7 +219,15 @@ function Game() {
     }
   }
 
-  const getHeuristicValue = (state: DotType[][], playerCaptured: DotType, opponentCaptured: DotType): number => {
+  const getHeuristicValue = (
+    state: DotType[][],
+    playerCaptured: DotType,
+    opponentCaptured: DotType,
+    player: DotType,
+    opponent: DotType,
+    x: number,
+    y: number,
+  ): number => {
     let playerCapturedDots = 0;
     let opponentCapturedDots = 0;
     for (let x = 0; x < state.length; x++) {
@@ -227,8 +236,90 @@ function Game() {
         if (state[x][y] === opponentCaptured) opponentCapturedDots++;
       }
     }
-    return playerCapturedDots - opponentCapturedDots;
+    const minMax = playerCapturedDots - opponentCapturedDots;
+    const heuristicForDot = getHeuristicForDot(state, x, y, player, opponent);
+    return 10 * (-heuristicForDot) + 100 * minMax;
   }; 
+
+  const getHeuristicForDot = (state: DotType[][], x: number, y: number, player: DotType, opponent: DotType) => {
+    let max = -1;
+    if (x > 0 && y > 0 && x < FIELD_SIZE - 1 && y < FIELD_SIZE - 1 &&
+      state[x][y-1] === player &&
+      state[x][y+1] === player &&
+      state[x-1][y] === opponent &&
+      state[x+1][y] === opponent
+    ) max = Math.max(max, 1.0);
+
+    if (x > 0 && y > 0 && x < FIELD_SIZE - 1 && y < FIELD_SIZE - 1 &&
+      state[x][y-1] === player &&
+      (state[x][y+1] === player || state[x][y+1] === DotType.empty) &&
+      (state[x-1][y] === player || state[x-1][y] === DotType.empty) &&
+      state[x+1][y] === opponent &&
+      state[x-1][y-1] === opponent
+    ) max = Math.max(max, 0.9);
+
+    if (x > 0 && y > 1 && x < FIELD_SIZE - 1 && y < FIELD_SIZE &&
+      state[x][y-1] === player &&
+      state[x][y-2] === player &&
+      (state[x-1][y] === player || state[x-1][y] === DotType.empty) &&
+      (state[x+1][y] === player || state[x+1][y] === DotType.empty) &&
+      state[x-1][y-1] === opponent &&
+      state[x+1][y-1] === opponent
+    ) max = Math.max(max, 0.9);
+
+    if (x > 0 && y > 0 && x < FIELD_SIZE - 1 && y < FIELD_SIZE - 1 &&
+      state[x-1][y-1] === opponent &&
+      (state[x-1][y+1] === player || state[x-1][y+1] === DotType.empty) &&
+      state[x+1][y+1] === opponent &&
+      (state[x+1][y-1] === player || state[x+1][y-1] === DotType.empty)
+    ) max = Math.max(max, 0.05);
+
+    if (x > 1 && y > 0 && x < FIELD_SIZE - 1 && y < FIELD_SIZE - 2 &&
+      state[x-1][y-1] === DotType.empty &&
+      state[x-1][y] === DotType.empty &&
+      state[x][y+1] === DotType.empty &&
+      state[x+1][y+1] === DotType.empty &&
+      state[x][y+2] === player &&
+      state[x-1][y+1] === opponent &&
+      state[x-2][y] === player
+    ) max = Math.max(max, 0.8);
+
+    if (x > 1 && y > 0 && x < FIELD_SIZE - 1 && y < FIELD_SIZE - 2 &&
+      state[x-1][y-1] === DotType.empty &&
+      state[x-1][y] === DotType.empty &&
+      state[x][y+1] === DotType.empty &&
+      state[x+1][y+1] === DotType.empty &&
+      state[x][y+2] === player &&
+      state[x-1][y+1] === opponent &&
+      state[x-2][y] === player
+    ) max = Math.max(max, 0.8);
+
+    if (x >= 0 && y > 1 && x < FIELD_SIZE - 3 && y < FIELD_SIZE &&
+      (state[x][y-1] === player || state[x][y-1] === DotType.empty) &&
+      (state[x][y-2] === player || state[x][y-2] === DotType.empty) &&
+      state[x+1][y-1] === DotType.empty &&
+      state[x+1][y-2] === DotType.empty &&
+      state[x+1][y] === DotType.empty &&
+      (state[x+2][y] === player || state[x+2][y] === DotType.empty) &&
+      state[x+2][y-1] === opponent &&
+      state[x+3][y-2] === opponent &&
+      (state[x+2][y-2] === player || state[x+2][y-2] === DotType.empty)
+    ) max = Math.max(max, 0.01);
+
+    if (x > 0 && y > 0 && x < FIELD_SIZE && y < FIELD_SIZE - 1 &&
+      state[x][y-1] === opponent &&
+      state[x][y+1] === opponent &&
+      state[x-1][y] === opponent
+    ) max = Math.max(max, -0.5);
+
+    if (x >= 0 && y > 0 && x < FIELD_SIZE - 1 && y < FIELD_SIZE &&
+      state[x][y-1] === opponent &&
+      state[x+1][y-1] === opponent &&
+      state[x+1][y] === opponent
+    ) max = Math.max(max, -0.5);
+
+    return max;
+  }
 
   const getDotElements = () => {
     let x = 0;
