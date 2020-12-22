@@ -81,6 +81,18 @@ const Game = () => {
         let _board = [...removeFromCardsByCardNumber(board, card.number)];
         let _deck = deck;
 
+        if (card.number === CardNumber.Jack) {
+          _board = [];
+          _deck = [..._deck, card, ...board];
+        }
+
+        if (card.number === CardNumber.Joker) {
+          const [userNewCard, aiNewCard, ...restDeck] = _deck;
+          setUserHand([...userHand, userNewCard]);
+          setAiHand([...aiHand, aiNewCard]);
+          _deck = restDeck;
+        }
+
         while (_board.length !== 4) {
           const [newCard, ...restDeck] = _deck;
           _deck = [...restDeck];
