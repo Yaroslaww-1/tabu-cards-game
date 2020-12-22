@@ -2,16 +2,16 @@ import React from 'react';
 import './index.css';
 
 import Card from './Card';
-import { calculatePoints, getRandomCards, removeFromCardsByCard, removeFromCardsByCardNumber, shuffleDeck } from './helper';
+import { calculatePoints, getFirstCardByCardNumber, getNumberOfCardsWithNumber, getRandomCards, hasCardWithNumber, removeFromCardsByCard, removeFromCardsByCardNumber, shuffleDeck } from './helper';
 import { CardNumber, CardSuit, ICard, Turn } from './types';
 
 const Game = () => {
   const [userHand, setUserHand] = React.useState<ICard[]>([]);
-  const [userSavedCards, setUserSavedCards] = React.useState<ICard[]>([]);
+  const [userPoints, setUserPoints] = React.useState<number>(0);
   const [userSelection, setUserSelection] = React.useState<ICard | null>(null);
 
   const [aiHand, setAiHand] = React.useState<ICard[]>([]);
-  const [aiSavedCards, setAiSavedCards] = React.useState<ICard[]>([]);
+  const [aiPoints, setAiPoints] = React.useState<number>(0);
 
   const [deck, setDeck] = React.useState<ICard[]>([]);
   const [board, setBoard] = React.useState<ICard[]>([]);
@@ -51,22 +51,65 @@ const Game = () => {
     setDeck(deck);
   }, []);
 
-  React.useEffect(() => {
-  }, [turn]);
-
   const drawCard = () => {
-    toggleTurn();
+    if (deck.length === 0) {
+      writeToLog(`game finished`);
+      return;
+    }
 
+    toggleTurn();
     const [card, ...restDeck] = deck;
 
     writeToLog(`user ${turn} drawn a card`)
-    if (turn === Turn.User)
+    if (turn === Turn.User) {
       setUserHand([...userHand, card]);
-    else
+    } else {
       setAiHand([...aiHand, card]);
+    }
 
-    setDeck(restDeck);
+    if (restDeck) setDeck(restDeck);
     return card;
+  }
+
+  const makeTurn = (card: ICard) => {
+    let _board = removeFromCardsByCardNumber(board, card.number);
+    let _deck = deck;
+
+    if (card.number === CardNumber.Jack) {
+      _board = [];
+      _deck = [..._deck, card, ...board];
+    }
+
+    if (card.number === CardNumber.Joker && _deck.length >= 2) {
+      const [userNewCard, aiNewCard, ...restDeck] = _deck;
+      setUserHand([...userHand, userNewCard]);
+      setAiHand([...aiHand, aiNewCard]);
+      if (restDeck) _deck = restDeck;
+    }
+
+    while (_board.length !== 4) {
+      if (deck.length === 0) break;
+      const [newCard, ...restDeck] = _deck;
+      if (restDeck) _deck = restDeck;
+      _board = [..._board, newCard];
+    }
+
+    setDeck(_deck);
+    setBoard(_board);
+
+    const points = calculatePoints(card);
+    if (turn === Turn.AI) {
+      setAiPoints(aiPoints + points);
+    } else {
+      setUserPoints(userPoints + points);
+    }
+
+    writeToLog(`${turn} saved card ${card.number} ${card.suit} and received ${points}`);
+    if (userHand.length === 0 || aiHand.length === 0) {
+      writeToLog(`game finished`);
+      return;
+    }
+    toggleTurn();
   }
 
   const onUserSelect = (card: ICard, isFirstPick: boolean) => {
@@ -77,36 +120,60 @@ const Game = () => {
     } else {
       if (userSelection && userSelection.number === card.number) {
         setUserHand([...removeFromCardsByCard(userHand, userSelection)]);
-        
-        let _board = [...removeFromCardsByCardNumber(board, card.number)];
-        let _deck = deck;
-
-        if (card.number === CardNumber.Jack) {
-          _board = [];
-          _deck = [..._deck, card, ...board];
-        }
-
-        if (card.number === CardNumber.Joker) {
-          const [userNewCard, aiNewCard, ...restDeck] = _deck;
-          setUserHand([...userHand, userNewCard]);
-          setAiHand([...aiHand, aiNewCard]);
-          _deck = restDeck;
-        }
-
-        while (_board.length !== 4) {
-          const [newCard, ...restDeck] = _deck;
-          _deck = [...restDeck];
-          _board = [..._board, newCard];
-        }
-
-        setDeck(_deck);
-        setBoard(_board);
-
-        toggleTurn();
-        writeToLog(`user saved card ${card.number} ${card.suit} and received ${calculatePoints(card)}`);
+        makeTurn(card);
       }
     }
   }
+
+  React.useEffect(() => {
+    if (turn === Turn.AI) {
+      let card: ICard | null = null;
+      if (hasCardWithNumber(aiHand, CardNumber.King) && hasCardWithNumber(board, CardNumber.King)) {
+        card = getFirstCardByCardNumber(aiHand, CardNumber.King)!;
+      } else
+      if (hasCardWithNumber(aiHand, CardNumber.Queen) && hasCardWithNumber(board, CardNumber.Queen)) {
+        card = getFirstCardByCardNumber(aiHand, CardNumber.Queen)!;
+      } else
+      if (hasCardWithNumber(aiHand, CardNumber.Ace) && hasCardWithNumber(board, CardNumber.Ace)) {
+        card = getFirstCardByCardNumber(aiHand, CardNumber.Ace)!;
+      } else {
+        for (const aiCard of aiHand) {
+          if (getNumberOfCardsWithNumber(aiHand, aiCard.number) >= 2 && hasCardWithNumber(board, aiCard.number)) {
+            card = aiCard;
+            break;
+          }
+        }
+        if (!card) {
+          for (const aiCard of aiHand) {
+            if (hasCardWithNumber(board, aiCard.number)) {
+              card = aiCard;
+              break;
+            }
+          }
+        }
+      }
+
+      if (card) {
+        setAiHand([...removeFromCardsByCard(aiHand, card)]);
+        makeTurn(card);
+      } else {
+        drawCard();
+      }
+      
+      return;
+    }
+  }, [turn]);
+
+  React.useEffect(() => {
+    // console.log(board);
+    for (const item of board) {
+      if (!item) {
+        console.log('AAAAAAAAAAAAAAAAAAAA', board);
+      }
+    }
+  }, [board]);
+
+  console.log(board);
 
   return (
     <div className="game">
@@ -118,16 +185,43 @@ const Game = () => {
         Turn: {turn}
       </div>
       <div className="row">
+        USER points: {userPoints}
+      </div>
+      <div className="row">
+        AI points: {aiPoints}
+      </div>
+      <div className="row">
         BOARD
-        {board.map(card => <Card key={`${card.number} ${card.suit}`} card={card} onClick={() => onUserSelect(card, false)} />)}
+        {board && board.map(card =>
+          <Card
+            key={`${card.number} ${card.suit}`}
+            card={card}
+            onClick={() => onUserSelect(card, false)}
+            isAvailable={false}
+          />
+        )}
       </div>
       <div className="row">
         USER hand
-        {userHand.map(card => <Card key={`${card.number} ${card.suit}`} card={card} onClick={() => onUserSelect(card, true)} />)}
+        {userHand.map(card =>
+          <Card
+            key={`${card.number} ${card.suit}`}
+            card={card}
+            onClick={() => onUserSelect(card, true)}
+            isAvailable={hasCardWithNumber(board, card.number)}
+          />
+        )}
       </div>
       <div className="row">
         AI hand
-        {aiHand.map(card => <Card key={`${card.number} ${card.suit}`} card={card} onClick={() => {}} />)}
+        {aiHand.map(card =>
+          <Card
+            key={`${card.number} ${card.suit}`}
+            card={card}
+            onClick={() => {}}
+            isAvailable={hasCardWithNumber(board, card.number)}
+          />
+        )}
       </div>
       <div className="log">
         {log.map((message) => <div>{`${message}\n`}</div>)}

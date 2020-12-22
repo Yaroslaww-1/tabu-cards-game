@@ -42,3 +42,17 @@ export const shuffleDeck = (deck: ICard[]) =>
     ),
     res),
   []);
+
+export const hasCardWithNumber = (cards: ICard[], cardNumber: CardNumber) => {
+  return cards.some(card => card.number === cardNumber);
+}
+
+export const getNumberOfCardsWithNumber = (cards: ICard[], cardNumber: CardNumber) => {
+  return cards.filter(card => card.number === cardNumber).length;
+}
+
+export const getFirstCardByCardNumber = (cards: ICard[], cardNumber: CardNumber) => {
+  for (const card of cards) {
+    if (card.number === cardNumber) return card;
+  }
+}

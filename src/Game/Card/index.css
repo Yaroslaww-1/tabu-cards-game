@@ -12,3 +12,7 @@
 
   text-align: center;
 }
+
+.isAvailable {
+  color: green;
+}

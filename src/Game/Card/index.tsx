@@ -5,12 +5,13 @@ import { ICard } from '../types';
 interface IProps {
   card: ICard;
   onClick: () => void;
+  isAvailable: boolean;
 }
 
-const Card: React.FC<IProps> = ({ onClick, card }) => {
+const Card: React.FC<IProps> = ({ onClick, card, isAvailable }) => {
   return (
     <div className="cardRoot">
-      <div className={`card`} onClick={onClick}>
+      <div className={`card ${isAvailable ? 'isAvailable' : ''}`} onClick={onClick}>
         {card.suit}
         {' '}
         {card.number}
