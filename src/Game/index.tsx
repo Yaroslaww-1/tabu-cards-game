@@ -123,7 +123,7 @@ const Game = () => {
   }
 
   React.useEffect(() => {
-    if (deck.length === 0) {
+    if (deck.length === 0 && userHand.length !== 0 && aiHand.length !== 0) {
       if (
         !userHand.some((card) => hasCardWithNumber(board, card.number)) &&
         !aiHand.some((card) => hasCardWithNumber(board, card.number))
