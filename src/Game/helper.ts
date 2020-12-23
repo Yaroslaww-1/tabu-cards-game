@@ -25,6 +25,13 @@ export const calculatePoints = (card: ICard) => {
   return 0;
 }
 
+export const calculatePointsByCardNumber = (cardNumber: CardNumber) => {
+  if (cardNumber === CardNumber.King) return 12;
+  if (cardNumber === CardNumber.Queen) return 11;
+  if (cardNumber === CardNumber.Ace) return 1;
+  return 0;
+}
+
 export const removeFromCardsByCard = (cards: ICard[], card: ICard) => cards.filter(_card => {
   if (_card.number === card.number && _card.suit === card.suit) return false;
   return true;
@@ -55,4 +62,14 @@ export const getFirstCardByCardNumber = (cards: ICard[], cardNumber: CardNumber)
   for (const card of cards) {
     if (card.number === cardNumber) return card;
   }
+}
+
+export const getUniqueCardNumbers = (cards: ICard[]): CardNumber[] => {
+  const uniqueCards: ICard[] = [];
+  for (const card of cards) {
+    if (!hasCardWithNumber(uniqueCards, card.number)) {
+      uniqueCards.push(card);
+    }
+  }
+  return uniqueCards.map(card => card.number);
 }

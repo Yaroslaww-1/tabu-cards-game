@@ -2,8 +2,9 @@ import React from 'react';
 import './index.css';
 
 import Card from './Card';
-import { calculatePoints, getFirstCardByCardNumber, getNumberOfCardsWithNumber, getRandomCards, hasCardWithNumber, removeFromCardsByCard, removeFromCardsByCardNumber, shuffleDeck } from './helper';
+import { calculatePoints, calculatePointsByCardNumber, getFirstCardByCardNumber, getNumberOfCardsWithNumber, getRandomCards, getUniqueCardNumbers, hasCardWithNumber, removeFromCardsByCard, removeFromCardsByCardNumber, shuffleDeck } from './helper';
 import { CardNumber, CardSuit, ICard, Turn } from './types';
+import { alphaBetaAlgorithm } from './algorithm';
 
 const Game = () => {
   const [userHand, setUserHand] = React.useState<ICard[]>([]);
@@ -52,10 +53,7 @@ const Game = () => {
   }, []);
 
   const drawCard = () => {
-    if (deck.length === 0) {
-      writeToLog(`game finished`);
-      return;
-    }
+    if (deck.length === 0) return;
 
     toggleTurn();
     const [card, ...restDeck] = deck;
@@ -68,6 +66,7 @@ const Game = () => {
     }
 
     if (restDeck) setDeck(restDeck);
+    else setDeck([]);
     return card;
   }
 
@@ -77,20 +76,22 @@ const Game = () => {
 
     if (card.number === CardNumber.Jack) {
       _board = [];
-      _deck = [..._deck, card, ...board];
+      _deck = [..._deck, ...board];
     }
 
     if (card.number === CardNumber.Joker && _deck.length >= 2) {
       const [userNewCard, aiNewCard, ...restDeck] = _deck;
-      setUserHand([...userHand, userNewCard]);
-      setAiHand([...aiHand, aiNewCard]);
+      setUserHand([...removeFromCardsByCard(userHand, card), userNewCard]);
+      setAiHand([...removeFromCardsByCard(aiHand, card), aiNewCard]);
       if (restDeck) _deck = restDeck;
+      else _deck = [];
     }
 
     while (_board.length !== 4) {
-      if (deck.length === 0) break;
+      if (_deck.length === 0) break;
       const [newCard, ...restDeck] = _deck;
       if (restDeck) _deck = restDeck;
+      else _deck = [];
       _board = [..._board, newCard];
     }
 
@@ -105,10 +106,6 @@ const Game = () => {
     }
 
     writeToLog(`${turn} saved card ${card.number} ${card.suit} and received ${points}`);
-    if (userHand.length === 0 || aiHand.length === 0) {
-      writeToLog(`game finished`);
-      return;
-    }
     toggleTurn();
   }
 
@@ -126,8 +123,52 @@ const Game = () => {
   }
 
   React.useEffect(() => {
+    if (deck.length === 0) {
+      if (
+        !userHand.some((card) => hasCardWithNumber(board, card.number)) &&
+        !aiHand.some((card) => hasCardWithNumber(board, card.number))
+      ) {
+        writeToLog('game has finished');
+      }
+    }
+  }, [deck, aiHand, userHand, board]);
+
+  React.useEffect(() => {
     if (turn === Turn.AI) {
       let card: ICard | null = null;
+      // Prefer to draw king or queen as a last card
+      if (deck.length === 1 && (
+        deck[0].number === CardNumber.King ||
+        deck[0].number === CardNumber.Queen
+      )) {
+        drawCard();
+        return;
+      }
+
+      if (deck.length === 0) {
+        const states = getUniqueCardNumbers(board)
+          .filter(cardNumber => hasCardWithNumber(aiHand, cardNumber))
+          .map((cardNumber, index) => [calculatePointsByCardNumber(cardNumber), index]);
+        if (states.length > 0) {
+          const result = alphaBetaAlgorithm({ 
+            depth: 0,
+            nodeIndex: 0,
+            values: states as [number, number][],
+            maximizingPlayer: true,
+          });
+
+          if (result) {
+            const [_, index] = result;
+            if (index) {
+              card = aiHand[index];
+              setAiHand([...removeFromCardsByCard(aiHand, card)]);
+              makeTurn(card);
+              return;
+            }
+          }
+        }
+      }
+
       if (hasCardWithNumber(aiHand, CardNumber.King) && hasCardWithNumber(board, CardNumber.King)) {
         card = getFirstCardByCardNumber(aiHand, CardNumber.King)!;
       } else
@@ -164,25 +205,12 @@ const Game = () => {
     }
   }, [turn]);
 
-  React.useEffect(() => {
-    // console.log(board);
-    for (const item of board) {
-      if (!item) {
-        console.log('AAAAAAAAAAAAAAAAAAAA', board);
-      }
-    }
-  }, [board]);
-
-  console.log(board);
-
   return (
     <div className="game">
       <div className="row">
         Cards remains: {deck.length}
         {' '}
         <button onClick={drawCard}>Draw card</button>
-        {' '}
-        Turn: {turn}
       </div>
       <div className="row">
         USER points: {userPoints}
@@ -192,7 +220,7 @@ const Game = () => {
       </div>
       <div className="row">
         BOARD
-        {board && board.map(card =>
+        {board.map(card =>
           <Card
             key={`${card.number} ${card.suit}`}
             card={card}
